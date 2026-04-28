@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎬 智能电影推荐 Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Noto Sans SC', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+        }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .chat-container {
+            scrollbar-width: thin;
+            scrollbar-color: #E50914 #1f1f1f;
+        }
+        
+        .chat-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .chat-container::-webkit-scrollbar-track {
+            background: #1f1f1f;
+        }
+        
+        .chat-container::-webkit-scrollbar-thumb {
+            background: #E50914;
+            border-radius: 3px;
+        }
+        
+        .typing-indicator span {
+            animation: typing 1.4s infinite;
+            animation-fill-mode: both;
+        }
+        
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+        
+        .movie-card {
+            transition: all 0.3s ease;
+        }
+        
+        .movie-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 40px rgba(229, 9, 20, 0.3);
+        }
+        
+        .rating-badge {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #000;
+            font-weight: bold;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #E50914 0%, #B20710 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(229, 9, 20, 0.5);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .message-appear {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #E50914, #FFD700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .review-card {
+            border-left: 3px solid #E50914;
+        }
+        
+        .pros-tag {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1));
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        
+        .cons-tag {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.1));
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+    </style>
+</head>
+<body class="text-white">
+    <div class="container mx-auto px-4 py-6 max-w-7xl">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold mb-2">
+                <span class="gradient-text">🎬 智能电影推荐 Agent</span>
+            </h1>
+            <p class="text-gray-400 text-lg">基于通义千问大模型的多轮对话式电影推荐系统</p>
+        </header>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- 左侧: 聊天区域 -->
+            <div class="lg:col-span-2">
+                <div class="glass rounded-2xl p-6 h-[600px] flex flex-col">
+                    <!-- 聊天标题 -->
+                    <div class="flex items-center justify-between mb-4 pb-4 border-b border-gray-700">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center">
+                                <span class="text-xl">🤖</span>
+                            </div>
+                            <div>
+                                <h2 class="font-semibold">小影</h2>
+                                <p class="text-xs text-green-400 flex items-center gap-1">
+                                    <span class="w-2 h-2 bg-green-400 rounded-full pulse"></span>
+                                    在线
+                                </p>
+                            </div>
+                        </div>
+                        <button onclick="clearChat()" class="text-gray-400 hover:text-white transition-colors text-sm">
+                            🗑️ 清空对话
+                        </button>
+                    </div>
+                    
+                    <!-- 聊天消息区域 -->
+                    <div id="chatMessages" class="flex-1 overflow-y-auto chat-container space-y-4 mb-4">
+                        <!-- 欢迎消息 -->
+                        <div class="message-appear">
+                            <div class="flex gap-3">
+                                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center flex-shrink-0">
+                                    <span>🤖</span>
+                                </div>
+                                <div class="bg-gray-800 rounded-2xl rounded-tl-sm p-4 max-w-[85%]">
+                                    <p class="text-gray-100">👋 你好！我是小影，你的专属电影推荐助手！</p>
+                                    <p class="text-gray-300 mt-2">告诉我你喜欢的电影类型、演员或导演，我可以帮你：</p>
+                                    <ul class="text-gray-400 mt-2 space-y-1 text-sm">
+                                        <li>🎯 智能推荐符合你口味的电影</li>
+                                        <li>⭐ 搜索全网真实评分</li>
+                                        <li>📝 分析观众真实评价</li>
+                                        <li>💡 解读电影优缺点</li>
+                                    </ul>
+                                    <p class="text-gray-300 mt-2">比如你可以说："我想看科幻片，有什么推荐吗？" 或者 "《流浪地球2》评分怎么样？"</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 输入区域 -->
+                    <div class="border-t border-gray-700 pt-4">
+                        <div class="flex gap-3">
+                            <input 
+                                type="text" 
+                                id="messageInput" 
+                                placeholder="输入你想聊的电影话题..."
+                                class="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 focus:outline-none focus:border-red-500 transition-colors"
+                                onkeypress="handleKeyPress(event)"
+                            >
+                            <button 
+                                id="sendBtn"
+                                onclick="sendMessage()"
+                                class="btn-primary px-6 py-3 rounded-xl font-medium flex items-center gap-2"
+                            >
+                                <span>发送</span>
+                                <span>🚀</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右侧: 电影信息展示 -->
+            <div class="lg:col-span-1">
+                <div class="glass rounded-2xl p-6 h-[600px] flex flex-col">
+                    <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                        <span>🎬</span>
+                        <span>电影详情</span>
+                    </h3>
+                    
+                    <div id="moviePanel" class="flex-1 overflow-y-auto space-y-4">
+                        <!-- 空状态 -->
+                        <div id="emptyState" class="h-full flex flex-col items-center justify-center text-gray-500">
+                            <span class="text-6xl mb-4">🎥</span>
+                            <p class="text-center">询问电影相关信息<br>这里会显示详情</p>
+                        </div>
+                        
+                        <!-- 电影信息卡片 -->
+                        <div id="movieCard" class="hidden space-y-4">
+                            <!-- 标题 -->
+                            <div>
+                                <h4 id="movieTitle" class="text-xl font-bold text-white"></h4>
+                            </div>
+                            
+                            <!-- 评分 -->
+                            <div id="ratingsSection" class="hidden">
+                                <p class="text-sm text-gray-400 mb-2">📊 全网评分</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <span id="doubanRating" class="rating-badge px-3 py-1 rounded-full text-sm hidden"></span>
+                                    <span id="maoyanRating" class="rating-badge px-3 py-1 rounded-full text-sm hidden"></span>
+                                    <span id="imdbRating" class="rating-badge px-3 py-1 rounded-full text-sm hidden"></span>
+                                </div>
+                            </div>
+                            
+                            <!-- 满意点 -->
+                            <div id="prosSection" class="hidden">
+                                <p class="text-sm text-gray-400 mb-2">✅ 好评关键词</p>
+                                <div id="prosTags" class="flex flex-wrap gap-2"></div>
+                            </div>
+                            
+                            <!-- 槽点 -->
+                            <div id="consSection" class="hidden">
+                                <p class="text-sm text-gray-400 mb-2">❌ 差评关键词</p>
+                                <div id="consTags" class="flex flex-wrap gap-2"></div>
+                            </div>
+                            
+                            <!-- 观众评价 -->
+                            <div id="reviewsSection" class="hidden">
+                                <p class="text-sm text-gray-400 mb-2">📝 真实观众评价</p>
+                                <div id="reviewsList" class="space-y-3"></div>
+                            </div>
+                            
+                            <!-- 相似电影 -->
+                            <div id="similarSection" class="hidden">
+                                <p class="text-sm text-gray-400 mb-2">🎯 相似推荐</p>
+                                <div id="similarList" class="space-y-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 底部快捷功能 -->
+        <div class="mt-6 glass rounded-2xl p-4">
+            <p class="text-sm text-gray-400 mb-3 text-center">💡 试试这样问我</p>
+            <div class="flex flex-wrap justify-center gap-2">
+                <button onclick="quickAsk('有什么好看的科幻电影推荐？')" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-full text-sm transition-colors">
+                    科幻电影推荐
+                </button>
+                <button onclick="quickAsk('最近有什么热门电影？')" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-full text-sm transition-colors">
+                    热门电影
+                </button>
+                <button onclick="quickAsk('帮我找评分高的喜剧片')" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-full text-sm transition-colors">
+                    高分喜剧
+                </button>
+                <button onclick="quickAsk('《你好，李焕英》评价怎么样？')" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-full text-sm transition-colors">
+                    电影评价
+                </button>
+                <button onclick="quickAsk('推荐几部2024年的电影')" class="px-4 py-2 bg-gray-8screen hover:bg-gray-700 rounded-full text-sm transition-colors">
+                    2024电影
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let sessionId = 'session_' + Date.now();
+        let isTyping = false;
+        
+        // DOM 元素
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            messageInput.focus();
+        });
+        
+        // 处理回车键
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+        
+        // 发送消息
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || isTyping) return;
+            
+            // 清空输入框
+            messageInput.value = '';
+            
+            // 添加用户消息
+            addMessage('user', message);
+            
+            // 显示加载状态
+            setTyping(true);
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        session_id: sessionId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                // 添加AI回复
+                addMessage('assistant', data.response);
+                
+                // 更新电影面板
+                if (data.movie_data) {
+                    updateMoviePanel(data.movie_data);
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                addMessage('assistant', '抱歉，服务出了点问题，请稍后再试。');
+            } finally {
+                setTyping(false);
+            }
+        }
+        
+        // 添加消息到聊天区域
+        function addMessage(role, content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message-appear';
+            
+            if (role === 'user') {
+                messageDiv.innerHTML = `
+                    <div class="flex gap-3 justify-end">
+                        <div class="bg-gradient-to-br from-red-600 to-red-800 rounded-2xl rounded-tr-sm p-4 max-w-[85%]">
+                            <p class="text-white">${escapeHtml(content)}</p>
+                        </div>
+                        <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center flex-shrink-0">
+                            <span>👤</span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div class="flex gap-3">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center flex-shrink-0">
+                            <span>🤖</span>
+                        </div>
+                        <div class="bg-gray-800 rounded-2xl rounded-tl-sm p-4 max-w-[85%]">
+                            <p class="text-gray-100 whitespace-pre-wrap">${formatContent(content)}</p>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // 设置打字状态
+        function setTyping(typing) {
+            isTyping = typing;
+            sendBtn.disabled = typing;
+            
+            if (typing) {
+                const typingDiv = document.createElement('div');
+                typingDiv.id = 'typingIndicator';
+                typingDiv.className = 'message-appear';
+                typingDiv.innerHTML = `
+                    <div class="flex gap-3">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center flex-shrink-0">
+                            <span>🤖</span>
+                        </div>
+                        <div class="bg-gray-800 rounded-2xl rounded-tl-sm p-4">
+                            <div class="typing-indicator flex gap-1">
+                                <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+                                <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+                                <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                chatMessages.appendChild(typingDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            } else {
+                const indicator = document.getElementById('typingIndicator');
+                if (indicator) indicator.remove();
+            }
+        }
+        
+        // 更新电影信息面板
+        function updateMoviePanel(data) {
+            const emptyState = document.getElementById('emptyState');
+            const movieCard = document.getElementById('movieCard');
+            
+            emptyState.classList.add('hidden');
+            movieCard.classList.remove('hidden');
+            
+            // 标题
+            document.getElementById('movieTitle').textContent = data.movie_name;
+            
+            // 评分
+            const ratingsSection = document.getElementById('ratingsSection');
+            const doubanRating = document.getElementById('doubanRating');
+            const maoyanRating = document.getElementById('maoyanRating');
+            const imdbRating = document.getElementById('imdbRating');
+            
+            if (data.ratings && Object.keys(data.ratings).length > 0) {
+                ratingsSection.classList.remove('hidden');
+                
+                if (data.ratings.douban) {
+                    doubanRating.textContent = `豆瓣 ${data.ratings.douban}`;
+                    doubanRating.classList.remove('hidden');
+                }
+                if (data.ratings.maoyan) {
+                    maoyanRating.textContent = `猫眼 ${data.ratings.maoyan}`;
+                    maoyanRating.classList.remove('hidden');
+                }
+                if (data.ratings.imdb) {
+                    imdbRating.textContent = `IMDB ${data.ratings.imdb}`;
+                    imdbRating.classList.remove('hidden');
+                }
+            }
+            
+            // 好评关键词
+            const prosSection = document.getElementById('prosSection');
+            const prosTags = document.getElementById('prosTags');
+            if (data.pros && data.pros.length > 0) {
+                prosSection.classList.remove('hidden');
+                prosTags.innerHTML = data.pros.map(pro => 
+                    `<span class="pros-tag px-3 py-1 rounded-full text-sm text-green-400">${pro}</span>`
+                ).join('');
+            }
+            
+            // 差评关键词
+            const consSection = document.getElementById('consSection');
+            const consTags = document.getElementById('consTags');
+            if (data.cons && data.cons.length > 0) {
+                consSection.classList.remove('hidden');
+                consTags.innerHTML = data.cons.map(con => 
+                    `<span class="cons-tag px-3 py-1 rounded-full text-sm text-red-400">${con}</span>`
+                ).join('');
+            }
+            
+            // 观众评价
+            const reviewsSection = document.getElementById('reviewsSection');
+            const reviewsList = document.getElementById('reviewsList');
+            if (data.reviews && data.reviews.length > 0) {
+                reviewsSection.classList.remove('hidden');
+                reviewsList.innerHTML = data.reviews.slice(0, 5).map(review => `
+                    <div class="review-card bg-gray-800/50 rounded-lg p-3">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs text-gray-500">${review.platform || '网友'}</span>
+                            ${review.rating ? '<span class="text-yellow-400">' + '⭐'.repeat(review.rating) + '</span>' : ''}
+                        </div>
+                        <p class="text-sm text-gray-300">${escapeHtml(review.content || '')}</p>
+                    </div>
+                `).join('');
+            }
+            
+            // 相似电影
+            const similarSection = document.getElementById('similarSection');
+            const similarList = document.getElementById('similarList');
+            if (data.similar && data.similar.length > 0) {
+                similarSection.classList.remove('hidden');
+                similarList.innerHTML = data.similar.slice(0, 3).map(movie => `
+                    <div class="bg-gray-800/50 rounded-lg p-2 cursor-pointer hover:bg-gray-700/50 transition-colors" onclick="quickAsk('${escapeHtml(movie.title)}怎么样？')">
+                        <p class="text-sm font-medium">${movie.title}</p>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        // 快捷提问
+        function quickAsk(text) {
+            messageInput.value = text;
+            sendMessage();
+        }
+        
+        // 清空对话
+        async function clearChat() {
+            chatMessages.innerHTML = `
+                <div class="message-appear">
+                    <div class="flex gap-3">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center flex-shrink-0">
+                            <span>🤖</span>
+                        </div>
+                        <div class="bg-gray-800 rounded-2xl rounded-tl-sm p-4 max-w-[85%]">
+                            <p class="text-gray-100">对话已清空！有什么电影想聊的吗？😊</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 重置面板
+            document.getElementById('emptyState').classList.remove('hidden');
+            document.getElementById('movieCard').classList.add('hidden');
+            
+            // 清除后端会话
+            try {
+                await fetch('/api/session/clear', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId })
+                });
+            } catch (e) {
+                console.error(e);
+            }
+            
+            // 重新生成session
+            sessionId = 'session_' + Date.now();
+        }
+        
+        // HTML转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // 格式化内容（支持简单的markdown）
+        function formatContent(text) {
+            // 转义HTML
+            let formatted = escapeHtml(text);
+            
+            // 粗体 **text**
+            formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong class="text-white">$1</strong>');
+            
+            // 换行
+            formatted = formatted.replace(/\n/g, '<br>');
+            
+            // 列表
+            formatted = formatted.replace(/- (.+)/g, '<span class="ml-2">• $1</span><br>');
+            
+            return formatted;
+        }
+    </script>
+</body>
+</html>
