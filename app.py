@@ -266,9 +266,12 @@ def health():
 
 
 if __name__ == '__main__':
-    print("=" * 50)
-    print("🎬 智能电影推荐 Agent 启动中...")
-    print("=" * 50)
-    print(f"📍 访问地址: http://localhost:5000")
-    print("=" * 50)
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # 读取 Railway 分配的端口，本地开发默认用 5000
+    port = int(os.getenv("PORT", 5000))
+    # 关闭 debug，禁用重载器，绑定 0.0.0.0
+    app.run(
+        debug=False,
+        host='0.0.0.0',
+        port=port,
+        use_reloader=False
+    )
