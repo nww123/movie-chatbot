@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎬 智能电影推荐 Agent</title>
+    <title>🎬 智能电影推荐BOT </title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
@@ -141,6 +141,49 @@
             background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.1));
             border: 1px solid rgba(239, 68, 68, 0.3);
         }
+
+        /* 真实评价卡片样式 */
+        .real-review-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.6));
+            border: 1px solid rgba(229, 9, 20, 0.15);
+            border-radius: 12px;
+            padding: 14px;
+            transition: all 0.25s ease;
+        }
+        .real-review-card:hover {
+            border-color: rgba(229, 9, 20, 0.4);
+            transform: translateX(4px);
+        }
+        .review-source-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+        .source-douban { background: rgba(0, 168, 132, 0.15); color: #00a884; border: 1px solid rgba(0, 168, 132, 0.3); }
+        .source-web { background: rgba(100, 120, 180, 0.15); color: #6478b4; border: 1px solid rgba(100, 120, 180, 0.3); }
+        .source-bing { background: rgba(80, 160, 220, 0.15); color: #50a0dc; border: 1px solid rgba(80, 160, 220, 0.3); }
+
+        .rating-star { color: #fbbf24; letter-spacing: 1px; }
+        .review-stats-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: rgba(255, 215, 0, 0.06);
+            border: 1px solid rgba(255, 215, 0, 0.15);
+            border-radius: 10px;
+            margin-bottom: 12px;
+        }
+        .data-source-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
     </style>
 </head>
 <body class="text-white">
@@ -148,9 +191,9 @@
         <!-- Header -->
         <header class="text-center mb-8">
             <h1 class="text-4xl md:text-5xl font-bold mb-2">
-                <span class="gradient-text">🎬 智能电影推荐 Agent</span>
+                <span class="gradient-text">🎬 智能电影推荐BOT </span>
             </h1>
-            <p class="text-gray-400 text-lg">基于通义千问大模型的多轮对话式电影推荐系统</p>
+            <p class="text-gray-400 text-lg">可以聊天的多轮对话式电影推荐系统</p>
         </header>
         
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -224,58 +267,95 @@
             
             <!-- 右侧: 电影信息展示 -->
             <div class="lg:col-span-1">
-                <div class="glass rounded-2xl p-6 h-[600px] flex flex-col">
-                    <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
-                        <span>🎬</span>
-                        <span>电影详情</span>
-                    </h3>
+                <div class="glass rounded-2xl p-5 h-[600px] flex flex-col">
+                    <!-- 标题区 -->
+                    <div class="flex items-center justify-between mb-3 pb-3 border-b border-gray-700">
+                        <h3 class="font-semibold text-base flex items-center gap-2">
+                            <span>🎬</span>
+                            <span id="panelTitle">电影详情</span>
+                        </h3>
+                    </div>
                     
                     <div id="moviePanel" class="flex-1 overflow-y-auto space-y-4">
                         <!-- 空状态 -->
                         <div id="emptyState" class="h-full flex flex-col items-center justify-center text-gray-500">
-                            <span class="text-6xl mb-4">🎥</span>
-                            <p class="text-center">询问电影相关信息<br>这里会显示详情</p>
+                            <span class="text-5xl mb-3">🎥</span>
+                            <p class="text-sm text-center">询问电影相关信息<br>这里会动态显示详情</p>
                         </div>
-                        
+
                         <!-- 电影信息卡片 -->
                         <div id="movieCard" class="hidden space-y-4">
-                            <!-- 标题 -->
+                            <!-- 标题 + 数据源标签 -->
                             <div>
-                                <h4 id="movieTitle" class="text-xl font-bold text-white"></h4>
+                                <h4 id="movieTitle" class="text-lg font-bold text-white leading-tight"></h4>
+                                <div id="dataSourceTags" class="data-source-tags mt-2"></div>
                             </div>
-                            
-                            <!-- 评分 -->
+
+                            <!-- 评分区域（增强版） -->
                             <div id="ratingsSection" class="hidden">
-                                <p class="text-sm text-gray-400 mb-2">📊 全网评分</p>
-                                <div class="flex flex-wrap gap-2">
-                                    <span id="doubanRating" class="rating-badge px-3 py-1 rounded-full text-sm hidden"></span>
-                                    <span id="maoyanRating" class="rating-badge px-3 py-1 rounded-full text-sm hidden"></span>
-                                    <span id="imdbRating" class="rating-badge px-3 py-1 rounded-full text-sm hidden"></span>
+                                <p class="text-xs text-gray-400 mb-2">📊 评分</p>
+                                <div id="ratingsBar" class="flex flex-wrap items-center gap-3">
+                                    <span id="doubanRating" class="rating-badge px-4 py-1.5 rounded-full text-sm font-bold hidden"></span>
+                                    <span id="maoyanRating" class="rating-badge px-4 py-1.5 rounded-full text-sm font-bold hidden"></span>
+                                    <span id="imdbRating" class="rating-badge px-4 py-1.5 rounded-full text-sm font-bold hidden"></span>
+                                    <span id="doubanCount" class="text-xs text-gray-500 hidden"></span>
                                 </div>
                             </div>
-                            
-                            <!-- 满意点 -->
-                            <div id="prosSection" class="hidden">
-                                <p class="text-sm text-gray-400 mb-2">✅ 好评关键词</p>
-                                <div id="prosTags" class="flex flex-wrap gap-2"></div>
+
+                            <!-- 推荐语 -->
+                            <div id="quoteSection" class="hidden">
+                                <div class="bg-gradient-to-r from-red-900/20 to-orange-900/10 border border-red-900/20 rounded-xl p-3">
+                                    <p class="text-xs text-gray-400 mb-1">💬 一句话评价</p>
+                                    <p id="quoteText" class="text-sm text-gray-200 italic leading-relaxed"></p>
+                                </div>
                             </div>
-                            
-                            <!-- 槽点 -->
-                            <div id="consSection" class="hidden">
-                                <p class="text-sm text-gray-400 mb-2">❌ 差评关键词</p>
-                                <div id="consTags" class="flex flex-wrap gap-2"></div>
-                            </div>
-                            
-                            <!-- 观众评价 -->
+
+                            <!-- ═══ 真实观众评价（核心展示区）═══ -->
                             <div id="reviewsSection" class="hidden">
-                                <p class="text-sm text-gray-400 mb-2">📝 真实观众评价</p>
-                                <div id="reviewsList" class="space-y-3"></div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <p class="text-xs text-gray-400 flex items-center gap-1">
+                                        <span>📝</span>
+                                        <span class="font-medium text-white">真实观众评价</span>
+                                        <span id="reviewCount" class="text-gray-600 ml-1"></span>
+                                    </p>
+                                </div>
+                                <div id="reviewsList" class="space-y-2.5 max-h-[300px] overflow-y-auto pr-1"></div>
                             </div>
-                            
+
+                            <!-- 满意点（保留兼容）-->
+                            <div id="prosSection" class="hidden">
+                                <p class="text-xs text-gray-400 mb-2">✅ 好评关键词</p>
+                                <div id="prosTags" class="flex flex-wrap gap-1"></div>
+                            </div>
+
+                            <!-- 槽点（保留兼容）-->
+                            <div id="consSection" class="hidden">
+                                <p class="text-xs text-gray-400 mb-2">❌ 差评关键词</p>
+                                <div id="consTags" class="flex flex-wrap gap-1"></div>
+                            </div>
+
+                            <!-- 推荐电影列表 -->
+                            <div id="recommendationsSection" class="hidden">
+                                <p class="text-xs text-gray-400 mb-2 flex items-center gap-1">
+                                    <span>🎬</span><span>推荐列表</span>
+                                </p>
+                                <div id="recommendationsList" class="space-y-1.5"></div>
+                            </div>
+
+                            <!-- 热门电影列表 -->
+                            <div id="hotMoviesSection" class="hidden">
+                                <p class="text-xs text-gray-400 mb-2 flex items-center gap-1">
+                                    <span>🔥</span><span>热门推荐</span>
+                                </p>
+                                <div id="hotMoviesList" class="space-y-1"></div>
+                            </div>
+
                             <!-- 相似电影 -->
                             <div id="similarSection" class="hidden">
-                                <p class="text-sm text-gray-400 mb-2">🎯 相似推荐</p>
-                                <div id="similarList" class="space-y-2"></div>
+                                <p class="text-xs text-gray-400 mb-2 flex items-center gap-1">
+                                    <span>🎯</span><span>相似推荐</span>
+                                </p>
+                                <div id="similarList" class="space-y-1"></div>
                             </div>
                         </div>
                     </div>
@@ -296,10 +376,10 @@
                 <button onclick="quickAsk('帮我找评分高的喜剧片')" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-full text-sm transition-colors">
                     高分喜剧
                 </button>
-                <button onclick="quickAsk('《你好，李焕英》评价怎么样？')" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-full text-sm transition-colors">
+                <button onclick="quickAsk('《星际穿越》评价怎么样？')" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-full text-sm transition-colors">
                     电影评价
                 </button>
-                <button onclick="quickAsk('推荐几部2024年的电影')" class="px-4 py-2 bg-gray-8screen hover:bg-gray-700 rounded-full text-sm transition-colors">
+                <button onclick="quickAsk('推荐几部2024年的电影')" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-full text-sm transition-colors">
                     2024电影
                 </button>
             </div>
@@ -437,87 +517,240 @@
             }
         }
         
-        // 更新电影信息面板
+        // 更新电影信息面板（v5 - 多源融合版）
         function updateMoviePanel(data) {
             const emptyState = document.getElementById('emptyState');
             const movieCard = document.getElementById('movieCard');
-            
+
             emptyState.classList.add('hidden');
             movieCard.classList.remove('hidden');
-            
+
+            // 重置面板状态
+            resetPanelState();
+
+            const panelTitle = document.getElementById('panelTitle');
+            const dataSourceTags = document.getElementById('dataSourceTags');
+            const titleEl = document.getElementById('movieTitle');
+
             // 标题
-            document.getElementById('movieTitle').textContent = data.movie_name;
-            
-            // 评分
+            const movieName = data.movie_name || '未知电影';
+            titleEl.textContent = movieName;
+
+            // 面板标题根据意图调整
+            const intent = data.intent || 'general';
+            if (intent === 'realtime') {
+                panelTitle.textContent = '🔥 热门资讯';
+            } else if (intent === 'recommend' && !data.has_reviews) {
+                panelTitle.textContent = '🎬 推荐列表';
+            } else if (data.has_reviews) {
+                panelTitle.textContent = '📊 影片详情 & 观众评价';
+            } else {
+                panelTitle.textContent = '🎬 影片详情';
+            }
+
+            // 数据来源标签（新增 - 展示融合的数据源）
+            const sources = data.sources || [];
+            const sourceLabels = {
+                local_db: { label: '本地数据库', cls: 'source-douban' },
+                douban_web: { label: '豆瓣网页', cls: 'source-douban' },
+                bing_search: { label: 'Bing搜索', cls: 'source-bing' },
+                fallback: { label: '本地热门', cls: 'source-douban' },
+            };
+            if (sources.length > 0) {
+                dataSourceTags.innerHTML = sources.map(s => {
+                    const info = sourceLabels[s] || { label: s, cls: 'source-web' };
+                    return `<span class="review-source-badge ${info.cls}">${info.label}</span>`;
+                }).join('');
+            }
+
+            // ═══════ 评分区域（增强） ═══════
             const ratingsSection = document.getElementById('ratingsSection');
-            const doubanRating = document.getElementById('doubanRating');
-            const maoyanRating = document.getElementById('maoyanRating');
-            const imdbRating = document.getElementById('imdbRating');
-            
-            if (data.ratings && Object.keys(data.ratings).length > 0) {
+            const ratingsBar = document.getElementById('ratingsBar');
+
+            if (data.rating && Object.keys(data.rating).length > 0) {
                 ratingsSection.classList.remove('hidden');
-                
-                if (data.ratings.douban) {
-                    doubanRating.textContent = `豆瓣 ${data.ratings.douban}`;
-                    doubanRating.classList.remove('hidden');
-                }
-                if (data.ratings.maoyan) {
-                    maoyanRating.textContent = `猫眼 ${data.ratings.maoyan}`;
-                    maoyanRating.classList.remove('hidden');
-                }
-                if (data.ratings.imdb) {
-                    imdbRating.textContent = `IMDB ${data.ratings.imdb}`;
-                    imdbRating.classList.remove('hidden');
+                for (const [platform, value] of Object.entries(data.rating)) {
+                    if (platform === 'douban_count') {
+                        const countEl = document.getElementById('doubanCount');
+                        countEl.textContent = `${value}人评价`;
+                        countEl.classList.remove('hidden');
+                        continue;
+                    }
+                    const elId = platform === 'douban' ? 'doubanRating'
+                                  : platform === 'maoyan' ? 'maoyanRating'
+                                  : platform === 'imdb' ? 'imdbRating' : null;
+                    if (elId) {
+                        const el = document.getElementById(elId);
+                        const label = { douban: '豆瓣', maoyan: '猫眼', imdb: 'IMDb' }[platform] || platform;
+                        el.textContent = `${label} ${value}`;
+                        el.classList.remove('hidden');
+                    }
                 }
             }
-            
-            // 好评关键词
-            const prosSection = document.getElementById('prosSection');
-            const prosTags = document.getElementById('prosTags');
-            if (data.pros && data.pros.length > 0) {
-                prosSection.classList.remove('hidden');
-                prosTags.innerHTML = data.pros.map(pro => 
-                    `<span class="pros-tag px-3 py-1 rounded-full text-sm text-green-400">${pro}</span>`
-                ).join('');
+
+            // ═══════ 推荐语 ═══════
+            const quoteSection = document.getElementById('quoteSection');
+            const quoteText = document.getElementById('quoteText');
+            if (data.quote) {
+                quoteSection.classList.remove('hidden');
+                quoteText.textContent = `"${data.quote}"`;
             }
-            
-            // 差评关键词
-            const consSection = document.getElementById('consSection');
-            const consTags = document.getElementById('consTags');
-            if (data.cons && data.cons.length > 0) {
-                consSection.classList.remove('hidden');
-                consTags.innerHTML = data.cons.map(con => 
-                    `<span class="cons-tag px-3 py-1 rounded-full text-sm text-red-400">${con}</span>`
-                ).join('');
-            }
-            
-            // 观众评价
+
+            // ═══════ ★★★ 真实观众评价（核心展示区）★★★ ═══════
             const reviewsSection = document.getElementById('reviewsSection');
             const reviewsList = document.getElementById('reviewsList');
-            if (data.reviews && data.reviews.length > 0) {
+            const reviewCount = document.getElementById('reviewCount');
+            const realReviews = data.reviews || [];
+
+            if (realReviews.length > 0) {
                 reviewsSection.classList.remove('hidden');
-                reviewsList.innerHTML = data.reviews.slice(0, 5).map(review => `
-                    <div class="review-card bg-gray-800/50 rounded-lg p-3">
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="text-xs text-gray-500">${review.platform || '网友'}</span>
-                            ${review.rating ? '<span class="text-yellow-400">' + '⭐'.repeat(review.rating) + '</span>' : ''}
+                reviewCount.textContent = `(共 ${realReviews.length} 条真实评价)`;
+
+                reviewsList.innerHTML = realReviews.slice(0, 8).map((review, idx) => {
+                    const text = review.text || review.content || '';
+                    const source = review.source || '观众';
+                    const rating = review.rating;
+
+                    // 来源标签样式映射
+                    const sourceClsMap = {
+                        '豆瓣': 'source-douban', '豆瓣短评': 'source-douban',
+                        '网络': 'source-web', 'Bing': 'source-bing',
+                    };
+                    const srcCls = sourceClsMap[source] || 'source-web';
+
+                    // 评分星星
+                    let starsHtml = '';
+                    if (rating) {
+                        const fullStars = Math.round(rating / 10); // 豆瓣10分制转5星
+                        starsHtml = `<span class="rating-star text-xs">${'★'.repeat(fullStars)}${'☆'.repeat(5 - fullStars)}</span>`;
+                    }
+
+                    // 截断长文本
+                    const displayText = text.length > 150 ? text.substring(0, 150) + '...' : text;
+
+                    return `
+                        <div class="real-review-card" style="animation: slideIn 0.3s ease-out ${idx * 0.05}s both;">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <span class="review-source-badge ${srcCls}">${source}</span>
+                                ${starsHtml}
+                            </div>
+                            <p class="text-[13px] text-gray-300 leading-relaxed">${escapeHtml(displayText)}</p>
                         </div>
-                        <p class="text-sm text-gray-300">${escapeHtml(review.content || '')}</p>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
             }
-            
-            // 相似电影
+
+            // ═══════ 网络/搜索资讯 ═══════
+            // 已隐藏：原始搜索片段容易包含无关内容，且 LLM 已基于此数据生成回答，无需重复展示
+
+            // ═══════ 好评/差评关键词（兼容旧格式） ═══════
+            renderTagSection('prosSection', 'prosTags', data.pros, 'pros-tag', 'text-green-400');
+            renderTagSection('consSection', 'consTags', data.cons, 'cons-tag', 'text-red-400');
+
+            // ═══════ 推荐电影列表 ═══════
+            const recsSection = document.getElementById('recommendationsSection');
+            const recsList = document.getElementById('recommendationsList');
+            const recommendations = data.recommendations || [];
+
+            if (recommendations.length > 0) {
+                recsSection.classList.remove('hidden');
+                recsList.innerHTML = recommendations.slice(0, 10).map((m, i) => {
+                    const mTitle = m.title || '未知';
+                    const mRating = m.rating || '?';
+                    const mGenre = m.genre || '';
+                    return `
+                        <div class="bg-gray-800/40 rounded-lg p-2.5 hover:bg-gray-700/40 transition-colors cursor-pointer flex items-start gap-2"
+                             onclick="quickAsk('${escapeHtml(mTitle)}怎么样？')">
+                            <span class="text-red-500 font-bold text-xs mt-0.5 w-4">${i + 1}</span>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-medium text-white truncate">《${mTitle}》</p>
+                                <p class="text-[11px] text-gray-500 mt-0.5">${mRating}分${mGenre ? ' | ' + mGenre : ''}</p>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // ═══════ 热门电影列表（兼容旧字段 hot_movies） ═══════
+            renderMovieList('hotMoviesSection', 'hotMoviesList', data.hot_movies);
+
+            // ═══════ 相似电影 ═══════
             const similarSection = document.getElementById('similarSection');
             const similarList = document.getElementById('similarList');
-            if (data.similar && data.similar.length > 0) {
+            const similarMovies = data.similar || [];
+
+            if (similarMovies.length > 0 && !(data.hot_movies && data.hot_movies.length > 0)) {
                 similarSection.classList.remove('hidden');
-                similarList.innerHTML = data.similar.slice(0, 3).map(movie => `
-                    <div class="bg-gray-800/50 rounded-lg p-2 cursor-pointer hover:bg-gray-700/50 transition-colors" onclick="quickAsk('${escapeHtml(movie.title)}怎么样？')">
-                        <p class="text-sm font-medium">${movie.title}</p>
-                    </div>
-                `).join('');
+                similarList.innerHTML = similarMovies.slice(0, 8).map(m => {
+                    const sTitle = m.title || m.name || '未知';
+                    const snippet = m.snippet || '';
+                    return `
+                        <div class="bg-gray-800/40 rounded-lg p-2 hover:bg-gray-700/40 transition-colors cursor-pointer"
+                             onclick="quickAsk('${escapeHtml(sTitle)}怎么样？')">
+                            <p class="text-xs font-medium text-white truncate">《${sTitle}》</p>
+                            ${snippet ? `<p class="text-[11px] text-gray-500 truncate mt-0.5">${escapeHtml(snippet.substring(0,45))}</p>` : ''}
+                        </div>
+                    `;
+                }).join('');
             }
+        }
+
+        // 辅助函数：渲染标签区域
+        function renderTagSection(sectionId, containerId, items, tagClass, textColor) {
+            const section = document.getElementById(sectionId);
+            const container = document.getElementById(containerId);
+            if (items && items.length > 0) {
+                section.classList.remove('hidden');
+                container.innerHTML = items.map(item =>
+                    `<span class="${tagClass} px-2 py-0.5 rounded-full text-xs ${textColor}">${item}</span>`
+                ).join('');
+            }
+        }
+
+        // 辅助函数：渲染电影列表
+        function renderMovieList(sectionId, listId, movies) {
+            const section = document.getElementById(sectionId);
+            const list = document.getElementById(listId);
+            if (movies && movies.length > 0) {
+                section.classList.remove('hidden');
+                list.innerHTML = movies.slice(0, 8).map((m, i) => {
+                    const mTitle = typeof m === 'string' ? m : (m.title || m.name || '未知');
+                    const snippet = m.snippet || '';
+                    return `
+                        <div class="bg-gray-800/40 rounded-lg p-2 cursor-pointer hover:bg-gray-700/40 transition-colors"
+                             onclick="quickAsk('${escapeHtml(mTitle)}怎么样？')">
+                            <div class="flex items-start gap-2">
+                                <span class="text-red-500 font-bold text-xs">${i + 1}</span>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-xs font-medium text-white truncate">${mTitle}</p>
+                                    ${snippet ? `<p class="text-[11px] text-gray-500 truncate">${escapeHtml(snippet.substring(0,45))}</p>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // 重置面板状态（v5增强）
+        function resetPanelState() {
+            // 隐藏所有section
+            ['doubanRating', 'maoyanRating', 'imdbRating', 'doubanCount'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            ['ratingsSection', 'quoteSection', 'reviewsSection', 'prosSection', 'consSection',
+             'recommendationsSection', 'hotMoviesSection', 'similarSection'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            // 清空内容
+            document.getElementById('dataSourceTags').innerHTML = '';
+            document.getElementById('quoteText').textContent = '';
+            document.getElementById('prosTags').innerHTML = '';
+            document.getElementById('consTags').innerHTML = '';
+            document.getElementById('reviewsList').innerHTML = '';
+            document.getElementById('recommendationsList').innerHTML = '';
+            document.getElementById('hotMoviesList').innerHTML = '';
+            document.getElementById('similarList').innerHTML = '';
         }
         
         // 快捷提问
