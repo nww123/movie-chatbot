@@ -24,7 +24,7 @@ def normalize_movie_name(name: str) -> str:
     """
     if not name:
         return ''
-    name = re.sub(r'[》""''【】（）()[\]{}《]', '', name)
+    name = re.sub(r'[]》""''【】（）()[\{}《]', '', name)
     name = re.sub(r'[，。！？、；：…—～·.,!?:;-]', '', name)
     name = re.sub(r'\s+', '', name).strip()
     return name
