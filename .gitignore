@@ -1,6 +1,29 @@
+# Python
 __pycache__/
-*.pyc
-.env
-.venv/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
 venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+
+# Logs
+*.log
+
+# Test
+test_*.py
